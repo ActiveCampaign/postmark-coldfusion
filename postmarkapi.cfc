@@ -11,36 +11,40 @@
 		<cfargument name="mailHTML" required="no" type="string" displayname="HTML body of the message" />
 		<cfargument name="mailTxt" required="no" type="string" displayname="Plain text body of the message" />
 		<!---Need to escape strings for JSON --->
-		<cfset mailto = #JSStringFormat(arguments.mailTo)# />
-		<cfset mailFrom = #JSStringFormat(arguments.mailFrom)#>
-		<cfset mailSubject = #JSStringFormat(arguments.mailSubject)# />
-		<cfif IsDefined("arguments.mailCc") AND #arguments.mailCc# NEQ "">
-			<cfset mailCc = #JSStringFormat(arguments.mailCc)# />
+		<cfset var mailto = JSStringFormat(arguments.mailTo) />
+		<cfset var mailFrom = JSStringFormat(arguments.mailFrom) />
+		<cfset var mailSubject = JSStringFormat(arguments.mailSubject) />
+		<cfset var mailCc = '' />
+		<cfset var mailHTML = '' />
+		<cfset var mailTxt = '' />
+		<cfset var mailReply = '' />
+		<cfif structKeyExists(arguments, "mailCc") AND arguments.mailCc NEQ "">
+			<cfset mailCc = JSStringFormat(arguments.mailCc) />
 		</cfif>
-		<cfif IsDefined("arguments.mailHTML") AND #arguments.mailHTML# NEQ "">
-			<cfset mailHTML = #JSStringFormat(arguments.mailHTML)# />
+		<cfif structKeyExists(arguments, "mailHTML") AND arguments.mailHTML NEQ "">
+			<cfset mailHTML = JSStringFormat(arguments.mailHTML) />
 		</cfif>
-		<cfif IsDefined("arguments.mailTxt") AND #arguments.mailTxt# NEQ "">
-			<cfset mailTxt = #JSStringFormat(arguments.mailTxt)# />
+		<cfif structKeyExists(arguments, "mailTxt") AND arguments.mailTxt NEQ "">
+			<cfset mailTxt = JSStringFormat(arguments.mailTxt) />
 		</cfif>
-		<cfif IsDefined("arguments.mailReply") AND #arguments.mailReply# NEQ "">
-			<cfset mailReply = #JSStringFormat(arguments.mailReply)# />
+		<cfif structKeyExists(arguments, "mailReply") AND arguments.mailReply NEQ "">
+			<cfset mailReply = JSStringFormat(arguments.mailReply) />
 		</cfif>
 		<!--- Assemble the JSON packet to send to Postmarkapp --->
 		<cfsavecontent variable="jsonPacket">
 			<cfprocessingdirective suppressWhiteSpace="yes">
 				<cfoutput>
 				{
-					"From" : "#mailFrom#", 
-					"To" : "#mailTo#", 
-					<cfif IsDefined("mailCc")>"Cc" : "#mailCc#",</cfif> 
-					"Subject" : "#mailSubject#" 
-					<cfif IsDefined("mailHTML")>, "HTMLBody" : "#mailHTML#"</cfif>
-					<cfif IsDefined("mailTxt")>, "TextBody" : "#mailTxt#"</cfif>
-					<cfif IsDefined("mailReply")>, "ReplyTo" : "#mailReply#"</cfif>
+					"From" : "#mailFrom#",
+					"To" : "#mailTo#",
+					<cfif len(trim(mailCc))>"Cc" : "#mailCc#",</cfif>
+					"Subject" : "#mailSubject#"
+					<cfif len(trim(mailHTML))>, "HTMLBody" : "#mailHTML#"</cfif>
+					<cfif len(trim(mailTxt))>, "TextBody" : "#mailTxt#"</cfif>
+					<cfif len(trim(mailReply))>, "ReplyTo" : "#mailReply#"</cfif>
 				}
 				</cfoutput>
-			</cfprocessingdirective>	
+			</cfprocessingdirective>
 		</cfsavecontent>
 		<!--- Send the request to Postmarkapp --->
 		<cfhttp url="http://api.postmarkapp.com/email" method="post">
@@ -50,7 +54,6 @@
 			<cfhttpparam type="body" encoded="no" value="#jsonPacket#" />
 		</cfhttp>
 		<!--- Return the status code --->
-		<cfset pmCode = #cfhttp.statusCode# />
-		<cfreturn pmCode />
+		<cfreturn cfhttp.statusCode />
 	</cffunction>
 </cfcomponent>
