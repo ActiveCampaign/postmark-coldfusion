@@ -10,6 +10,7 @@
 		<cfargument name="mailCc" required="no" type="string" displayname="CC recipients (if applicable)" />
 		<cfargument name="mailHTML" required="no" type="string" displayname="HTML body of the message" />
 		<cfargument name="mailTxt" required="no" type="string" displayname="Plain text body of the message" />
+		<cfargument name="mailAttachment" required="no" type="string" displayname="Attachment (optional)" />
 		<!---Need to escape strings for JSON --->
 		<cfset var mailto = JSStringFormat(arguments.mailTo) />
 		<cfset var mailFrom = JSStringFormat(arguments.mailFrom) />
@@ -30,6 +31,18 @@
 		<cfif structKeyExists(arguments, "mailReply") AND arguments.mailReply NEQ "">
 			<cfset mailReply = JSStringFormat(arguments.mailReply) />
 		</cfif>
+		<!--- If a filename to attach is specified:
+			1. Check that it exists
+			2. Read as a binary file
+			3. Convert to Base64
+		--->
+		<cfif structKeyExists(arguments,"mailAttachment") AND arguments.mailAttachment NEQ "">
+			<cfif FileExists(arguments.mailAttachment)>
+				<cfset attachmentFile = ToBase64(FileReadBinary(arguments.mailAttachment))>
+				<!--- Split filename by Unix-style directory slashes. Set last piece as displayed attachment name --->
+				<cfset attachmentName = ListLast(arguments.mailAttachment,"/")>
+			</cfif>
+		</cfif>
 		<!--- Assemble the JSON packet to send to Postmarkapp --->
 		<cfsavecontent variable="jsonPacket">
 			<cfprocessingdirective suppressWhiteSpace="yes">
@@ -42,6 +55,8 @@
 					<cfif len(trim(mailHTML))>, "HTMLBody" : "#mailHTML#"</cfif>
 					<cfif len(trim(mailTxt))>, "TextBody" : "#mailTxt#"</cfif>
 					<cfif len(trim(mailReply))>, "ReplyTo" : "#mailReply#"</cfif>
+					<!--- If we specified a filename, and successfully read it above, specify it here, and send as a Base64 octet-stream --->
+					<cfif IsDefined("attachmentName") AND IsDefined("attachmentFile")>, "Attachments" : [{ "Name": "#JSStringFormat(attachmentName)#", "Content": "#JSStringFormat(attachmentFile)#", "ContentType": "application/octet-stream" }]</cfif>
 				}
 				</cfoutput>
 			</cfprocessingdirective>
